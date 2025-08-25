@@ -23,18 +23,28 @@
     .bar {
       flex: 1 0 auto;
       height: 100%;
+      box-sizing: border-box; /* importantissimo per far rientrare i bordi nella larghezza */
     }
-    .bar.white { background: #000000; }
-    .bar.black { background: #ffffff; }
+    .bar.white { 
+      background: #ffffff; 
+      border-left: 1px solid #000000;
+    }
+    .bar.black { 
+      background: #000000; 
+      border-left: 1px solid #ffffff;
+    }
+    /* opzionale: se vuoi anche il bordo destro dell'ultima barra */
+    .bar:last-child {
+      border-right: 1px solid currentColor;
+    }
   </style>
 </head>
 <body>
   <div id="preview" class="preview"></div>
 
   <script>
-    // 👉 Scegli qui il numero
-    const number = 6969; // modifica questo numero !!!!!!!!!!!
-    const bits = 13;    // numero di bit minimi (guardare sempre quante cifre ha in binario il numero)
+    const number = 6969; 
+    const bits = 13;    
 
     function toBinaryString(n, minBits=0){
       let bin = n.toString(2);
