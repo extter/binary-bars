@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Barre Binarie</title>
+  <style>
+    :root{
+      --bg:#0b0c10;
+      --card:#14161b;
+      --muted:#9aa3b2;
+      --accent:#5eead4;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial; background:var(--bg); color:#e5e7eb;
+      display:flex; min-height:100svh; align-items:center; justify-content:center; padding:24px;
+    }
+    .card{
+      width:min(100%,960px); background:linear-gradient(180deg,#161922,#0e1117); border:1px solid #222633; border-radius:20px; padding:24px; box-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    h1{margin:0 0 12px; font-size:clamp(20px,3vw,28px)}
+    p.desc{margin:.25rem 0 1rem; color:var(--muted)}
+    .grid{display:grid; grid-template-columns:repeat(12,1fr); gap:12px}
+    .row{display:flex; gap:12px; flex-wrap:wrap}
+    .field{grid-column:span 12; display:flex; flex-direction:column; gap:6px}
+    label{font-size:12px; color:var(--muted)}
+    input[type="text"], input[type="number"], select{
+      background:#0c0f14; color:#e5e7eb; border:1px solid #2a3040; border-radius:12px; padding:10px 12px; outline:none; width:100%;
+    }
+    input[type="number"]{appearance:textfield}
+    .controls{grid-column:span 12}
+    .controls .chip{display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid #2a3040; border-radius:999px; background:#0c0f14; cursor:pointer}
+    .controls .chip input{accent-color:var(--accent)}
+    .btn{
+      display:inline-flex; align-items:center; gap:8px; border-radius:12px; padding:10px 14px; background:var(--accent); color:#0b0c10; border:none; font-weight:600; cursor:pointer;
+      box-shadow:0 6px 18px rgba(94,234,212,.25)
+    }
+    .btn.secondary{background:#161b22; color:#e5e7eb; border:1px solid #2a3040; box-shadow:none}
+    .toolbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0 18px}
+    .previewWrap{background:var(--card); border:1px solid #222633; border-radius:16px; padding:14px}
+    .preview{
+      width:100%; height:320px; border-radius:12px; overflow:hidden; display:flex; gap:0; align-items:stretch; justify-content:stretch; background:#fff;
+    }
+    .preview.vertical{flex-direction:column; height:420px}
+    .bar{flex:1 0 auto}
+    .bar.white{background:#ffffff}
+    .bar.black{background:#000000}
+    .legend{display:flex; gap:8px; align-items:center; color:var(--muted); font-size:12px; margin-top:8px}
+    .legend span.dot{display:inline-block; width:14px; height:14px; border-radius:3px; border:1px solid #2a3040}
+    .legend .white{background:#ffffff}
+    .legend .black{background:#000000}
+    .code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace; font-size:14px; background:#0c0f14; padding:8px 10px; border-radius:10px; border:1px solid #2a3040}
+    .footer{margin-top:16px; color:var(--muted); font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Barre Bianche/Nere per Numeri Binari</h1>
+    <p class="desc">Inserisci un numero decimale o una stringa binaria. Ogni bit genera una barra: <strong>1 → nera</strong>, <strong>0 → bianca</strong>.</p>
+
+    <div class="grid">
+      <div class="field" style="grid-column:span 6">
+        <label for="value">Valore</label>
+        <input id="value" type="text" placeholder="Es. 42 oppure 101010" />
+      </div>
+      <div class="field" style="grid-column:span 3">
+        <label for="base">Interpreta come</label>
+        <select id="base">
+          <option value="10">Decimale</option>
+          <option value="2">Binario</option>
+          <option value="16">Esadecimale</option>
+        </select>
+      </div>
+      <div class="field" style="grid-column:span 3">
+        <label for="bits">Bit minimi (padding)</label>
+        <input id="bits" type="number" min="1" step="1" placeholder="auto" />
+      </div>
+
+      <div class="controls">
+        <div class="toolbar">
+          <label class="chip"><input type="checkbox" id="msbleft" checked> MSB a sinistra</label>
+          <label class="chip"><input type="checkbox" id="vertical"> Orientazione verticale</label>
+          <label class="chip"><input type="checkbox" id="invert"> Inverti colori (1 → bianco)</label>
+          <button class="btn" id="renderBtn">Genera</button>
+          <button class="btn secondary" id="shareBtn">Copia permalink</button>
+        </div>
+      </div>
+
+      <div class="field" style="grid-column:span 12">
+        <div class="previewWrap">
+          <div id="preview" class="preview"></div>
+          <div class="legend">
+            <span class="dot black"></span> 1
+            <span class="dot white" style="margin-left:10px"></span> 0
+            <span style="margin-left:auto" class="code" id="binOut">bin: –</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">Suggerimento: aggiungi parametri all'URL (es. <span class="code">?v=42&base=10&bits=8&msb=1&vert=0&inv=0</span>) per condividere una configurazione precisa.</div>
+  </div>
+
+  <script>
+    const $ = (q)=>document.querySelector(q);
+
+    function toBinaryString(value, base){
+      if(base === 2){
+        if(!/^[01]+$/.test(value)) throw new Error("Binario non valido");
+        return value.replace(/^0+/, '') || '0';
+      }
+      const n = parseInt(value, base);
+      if(Number.isNaN(n) || n < 0) throw new Error("Numero non valido");
+      return n.toString(2);
+    }
+
+    function padLeft(str, total){
+      if(!total || total <= str.length) return str;
+      return '0'.repeat(total - str.length) + str;
+    }
+
+    function render(){
+      const preview = $('#preview');
+      const value = $('#value').value.trim();
+      const base = parseInt($('#base').value,10);
+      const bits = $('#bits').value ? parseInt($('#bits').value,10) : null;
+      const msbleft = $('#msbleft').checked;
+      const vertical = $('#vertical').checked;
+      const invert = $('#invert').checked;
+
+      preview.classList.toggle('vertical', vertical);
+      preview.innerHTML = '';
+
+      if(!value){ $('#binOut').textContent = 'bin: –'; return; }
+
+      let bin;
+      try{
+        bin = toBinaryString(value, base);
+      }catch(e){
+        preview.innerHTML = `<div style="padding:16px; color:#fda4af">${e.message}</div>`;
+        $('#binOut').textContent = 'bin: –';
+        return;
+      }
+
+      const padded = padLeft(bin, bits);
+      const seq = msbleft ? padded : padded.split('').reverse().join('');
+      $('#binOut').textContent = 'bin: ' + padded;
+
+      for(const ch of seq){
+        const isOne = ch === '1';
+        const bar = document.createElement('div');
+        bar.className = 'bar ' + ( (isOne ^ invert) ? 'black' : 'white');
+        preview.appendChild(bar);
+      }
+    }
+
+    function updateFromURL(){
+      const u = new URL(window.location.href);
+      const v = u.searchParams.get('v');
+      const base = parseInt(u.searchParams.get('base')||'10',10);
+      const bits = u.searchParams.get('bits');
+      const msb = u.searchParams.get('msb');
+      const vert = u.searchParams.get('vert');
+      const inv = u.searchParams.get('inv');
+
+      if(v !== null) $('#value').value = v;
+      if(!Number.isNaN(base)) $('#base').value = String(Math.max(2, Math.min(16, base)));
+      if(bits !== null) $('#bits').value = bits;
+      if(msb !== null) $('#msbleft').checked = msb !== '0';
+      if(vert !== null) $('#vertical').checked = vert === '1';
+      if(inv !== null) $('#invert').checked = inv === '1';
+      render();
+    }
+
+    function copyPermalink(){
+      const u = new URL(window.location.href);
+      u.searchParams.set('v', $('#value').value.trim());
+      u.searchParams.set('base', $('#base').value);
+      if($('#bits').value) u.searchParams.set('bits', $('#bits').value); else u.searchParams.delete('bits');
+      u.searchParams.set('msb', $('#msbleft').checked ? '1':'0');
+      u.searchParams.set('vert', $('#vertical').checked ? '1':'0');
+      u.searchParams.set('inv', $('#invert').checked ? '1':'0');
+      navigator.clipboard.writeText(u.toString()).then(()=>{
+        const btn = document.getElementById('shareBtn');
+        const old = btn.textContent; btn.textContent = 'Copiato!';
+        setTimeout(()=>btn.textContent=old, 1200);
+      });
+    }
+
+    document.getElementById('renderBtn').addEventListener('click', render);
+    document.getElementById('shareBtn').addEventListener('click', copyPermalink);
+
+    // Default: un esempio carino
+    if(!location.search){
+      $('#value').value = '42';
+      $('#base').value = '10';
+      $('#bits').value = '8';
+    }
+    updateFromURL();
+  </script>
+</body>
+</html>
